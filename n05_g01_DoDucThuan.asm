@@ -11,7 +11,7 @@ stack: .space 256
 prompt:	.asciiz "Nhap bieu thuc trung to\nChi nhap so nguyen va khong chua ki hieu dac biet va bo dau '('"
 newLine: .asciiz "\n"
 prompt_postfix: .asciiz "PostFix is: "                # Khai bao string cho nhan
-prompt_result: .asciiz "Result is: "                  # Khai bao string cho nhan
+#prompt_result: .asciiz "Result is: "                  # Khai bao string cho nhan
 prompt_infix: .asciiz "Infix is: "                    # Khai bao string cho nhan
 
 # Nhan tien to
@@ -431,15 +431,15 @@ end_while_p_s:
 # add null to end of stack
 
 # print postfix
-la $a0, prompt_result                             # goi string
-li $v0, 4                                         # gian gia tri
-syscall                                           # thuc hien
+#la $a0, prompt_result                             # goi string
+#li $v0, 4                                         # gian gia tri
+#syscall                                           # thuc hien
 
-jal pop                                           # nhay den pop
-nop                                               # lenh tre
-add $a0, $zero, $v0                               # lenh gan
-li $v0, 1                                         # gan gia tri
-syscall                                           # thuc hien
+#jal pop                                           # nhay den pop
+#nop                                               # lenh tre
+#add $a0, $zero, $v0                               # lenh gan
+#li $v0, 1                                         # gan gia tri
+#syscall                                           # thuc hien
 
 la $a0, newLine                                   # goi string
 li $v0, 4                                         # gan gia tri
