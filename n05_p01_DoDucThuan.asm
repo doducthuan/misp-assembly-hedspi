@@ -9,8 +9,6 @@
 # - Kiem tra cac truong hop dac biet:
 #	+ So nam ngoai doan [0, 99]
 #	+ Chia cho 0
-# 	+ Luy thua mu 0
-#	+ Cho phep nhap bien va nhap gia tri cua bien
 # 	+ Kiem tra dau ngoac
 #
 #=================================================================================================
