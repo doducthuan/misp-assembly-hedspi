@@ -1,333 +1,467 @@
+# ================================================================================================
+#				   BIEU THUC TRUNG TO HAU TO - MIPS CODE
+#				 © 2017 Le Thi Khanh. All rights reserved.
+# Chuc nang:
+# - Nhap vao bieu thuc trung to
+# - In ra bieu thuc hau to 
+# - In ra ket qua cua bieu thuc trung to
+# - Ho tro cac phep toan: cong, tru, nha, chia lay thuong, luy thua
+# - Kiem tra cac truong hop dac biet:
+#	+ So nam ngoai doan [0, 99]
+#	+ Chia cho 0
+# 	+ Luy thua mu 0
+#	+ Cho phep nhap bien va nhap gia tri cua bien
+# 	+ Kiem tra dau ngoac
+# - Chua co menu
+#=================================================================================================
+
 .data
-	infix: .space 256
-	postfix: .space 256
-	operator: .space 256
-	endMsg: .asciiz "continue??"
-	errorMsg: .asciiz "input not correct"
-	startMsg: .asciiz "please enter infix\nNote: contain + - * / ()\nnumber from 00-99"
-	prompt_postfix: .asciiz "postfix expression: "
-	prompt_result: .asciiz "result: "
-	prompt_infix: .asciiz "infix expression: "
-	converter: .word 1
-	wordToConvert: .word 1
-	stack: .float
+infix:		.space 256
+infix_:		.space 256
+postfix:	.space 256
+postfix_:	.space 256
+stack:		.space 256
+
+msg_read_infix:		.asciiz "Xin moi nhap bieu thuc trung to: "
+msg_print_infix:	.asciiz "Bieu thuc trung to: "
+msg_print_postfix:	.asciiz "Bieu thuc hau to: "
+msg_print_result:	.asciiz "Ket qua: "
+msg_enter:		.asciiz "\n"
+msg_error1:		.asciiz "Ban da nhap so lon hon 99. Lam on nhap lai!"
+msg_error2:		.asciiz "Ban da nhap so nho hon 0. Lam on nhap lai!"
+msg_error3:		.asciiz "Ban da nhap so chia bang 0. Lam on nhap lai!"
+msg_error4:		.asciiz "Nhap sai dau ngoac!"
+msg_enter_value:	.asciiz "Nhap vao gia tri cua bien theo thu tu xuat hien trong infix: "
+
 .text
-start:
-# nhap vao bieu thuc trung to
-	li $v0, 54
-	la $a0, startMsg
-	la $a1, infix
- 	la $a2, 256
- 	syscall
- 	beq $a1,-2,end			# if cancel then end 
- 	beq $a1,-3,start			# if enter then start
-# in bieu thuc trung to  
-	li $v0, 4
-	la $a0, prompt_infix
-	syscall
-	li $v0, 4
-	la $a0, infix
-	syscall
-	li $v0, 11
-	li $a0, '\n'
-	syscall
-# khoi tao cac trang thai
-	li $s7,0					# bien trang thai $s7 
-					
-						# trang thai "1"  nhan vao so (0 -> 99)
-						# trang thai "2"  nhan vao toan tu(* / + -)
-						# trang thai "3"  nhan vao dau "("
-						# trang thai "4"  nhan vao dau ")"
-	li $t9,0					# dem so chu so?
-	li $t5,-1				# luu dinh cua offset postfix
-	li $t6,-1				# luu dinh cua offset toan tu
-	la $t1, infix				# load cac dia chi cua cac offset
-	la $t2, postfix
-	la $t3, operator	
-	addi $t1,$t1,-1				# Set dia chi khoi tao infix la -1
-# chuyen sang postfix
-scanInfix: 					# Loop for each moi ki tu trong postfix
-# kiem tra dau vao
-	addi $t1, $t1, 1				# tang vi tri con tro infix len 1 don vii = i + 1 
-	lb $t4, ($t1)				# lay gia tri cua con tro infix hien tai
-	beq $t4, ' ', scanInfix			# neu la space tiep tuc scan
-	beq $t4, '\n', EOF			# Scan ket thuc pop tat ca cac toan tu sang postfix
-	beq $t9, 0, digit1			# Neu trang thai là 0 => co 1 chu so
-	beq $t9, 1, digit2			# Neu trang thai là 1 => co 2 chu so
-	beq $t9, 2, digit3			# neu trang thai là 2 => co 3 chu so
-	continueScan:
-	beq $t4, '+', plusMinus			# kiem tra ki tu hien tai $t4
-	beq $t4, '-', plusMinus
-	beq $t4, '*', multiplyDivide
-	beq $t4, '/', multiplyDivide
-	beq $t4, '(', openBracket
-	beq $t4, ')', closeBracket
-wrongInput:					# dau vao loi
-	li $v0, 55
- 	la $a0, errorMsg
- 	li $a1, 2
- 	syscall
- 	j ask
-finishScan:
-# in bieu thuc infix
-	# Print prompt:
-	li $v0, 4
-	la $a0, prompt_postfix
-	syscall
-	li $t6,-1				# set gia tri infix hien tai là -1 $s6= -1
-printPostfix:
-	addi $t6,$t6,1				# tang offset cua postfix hien tai 
-	add $t8,$t2,$t6				# load dia chi cua postfix hien tai
-	lbu $t7,($t8)				# Load gia tri cua postfix hien tai
-	bgt $t6,$t5,finishPrint			# in ra postfix --> tính ket qua
-	bgt $t7,99,printOperator			# neu postfix hien tai> 99 --> la mot toan tu
-	# Neu khong thi la mot toan hang
-	li $v0, 1
-	add $a0,$t7,$zero
-	syscall
-	li $v0, 11
-	li $a0, ' '
-	syscall
-	j printPostfix				# Loop
-	printOperator:
-	li $v0, 11
-	addi $t7,$t7,-100			# Decode toán tu
-	add $a0,$t7,$zero
-	syscall
-	li $v0, 11
-	li $a0, ' '
-	syscall
-	j printPostfix				# Loop
-finishPrint:
-	li $v0, 11
-	li $a0, '\n'
-	syscall
-# tính toán ket 	qua
-	li $t9,-4				# set offset cua dinh stack là -4
-	la $t3,stack				# Load dia chi dinh stack 
-	li $t6,-1				# Load offset cua Postfix hien tai là -1
-	l.s $f0,converter			# Load converter
-CalculatorPost:	
-	addi $t6,$t6,1				# tang offset hien tai cua Postfix  
-	add $t8,$t2,$t6				# Load dia chi cua postfix hien tai
-	lbu $t7,($t8)				# Load gia tri cua postfix hien tai
-	bgt $t6,$t5,printResult			# tính toán ket qua va in ra
-	bgt $t7,99,calculate			# neu gia tri postfix hien tai > 99 --> toan tu --> lay ra 2 toan hang va tính toán
-	# neu khong thi la toan hang
-	addi $t9,$t9,4				# tang offset dinh stack len 
-	add $t4,$t3,$t9				# tang dia chi cua dinh stack
-	sw $t7,wordToConvert	
-	l.s $f10,wordToConvert			# Bien $f10 la bien trung gian luu gia tri tam thoi
-	div.s $f10,$f10,$f0
-	s.s $f10,($t4)				# day so vào stack
-	sub.s $f10,$f10,$f10			# Reset f10
-	j CalculatorPost				# Loop
-	calculate:	
-		# Pop 1 so
-		add $t4,$t3,$t9		
-		l.s $f3,($t4)
-		# pop so tiep theo
-		addi $t9,$t9,-4
-		add $t4,$t3,$t9		
-		l.s $f2,($t4)
-		# Decode toán tu
-		beq $t7,143,plus
-		beq $t7,145,minus
-		beq $t7,142,multiply
-		beq $t7,147,divide
-		plus:
-			add.s $f1,$f2,$f3	# tinh tong gia tri cua 2 con tro dang luu gia tri toan hang
-			s.s $f1,($t4)		# luu gia tri cua con tro ra $t4
-			sub.s $f2,$f2,$f2	# Reset f2 f3
-			sub.s $f3,$f3,$f3	
-			j CalculatorPost
-		minus:
-			sub.s $f1,$f2,$f3
-			s.s $f1,($t4)	
-			sub.s $f2,$f2,$f2	# Reset f2 f3
-			sub.s $f3,$f3,$f3
-			j CalculatorPost
-		multiply:
-			mul.s $f1,$f2,$f3
-			s.s $f1,($t4)	
-			sub.s $f2,$f2,$f2	# Reset f2 f3
-			sub.s $f3,$f3,$f3
-			j CalculatorPost
-		divide:
-			div.s $f1,$f2,$f3
-			s.s $f1,($t4)	
-			sub.s $f2,$f2,$f2	# Reset f2 f3
-			sub.s $f3,$f3,$f3
-			j CalculatorPost
+# nhap infix
+input_infix:		li	$v0, 54
+			la	$a0, msg_read_infix
+			la	$a1, infix_
+			la 	$a2, 256
+			syscall
+
+# in ra infix
+li	$v0, 4
+la	$a0, msg_print_infix
+syscall
+
+li	$v0, 4
+la	$a0, infix_
+syscall	
+
+# 1. chuyen infix ve postfix
+li	$s0, 0		# bien dem de duyet infix
+li	$s1, 0		# bien dem de duyet postfix
+li	$s2, -1		# bien dem de duyet stack
+
+# bo dau ngoac trong postfix
+li	$s6, 0		# bien dem de duyet postfix
+li	$s7, 0		# bien dem de duyet postfix_
+
+# bo tat ca dau cach trong infix
+li	$s4, 0
+li	$s5, 0
+
+# bien dem dau (
+li	$a3, 0
+remove_space:		lb	$t5, infix_($s4)
+			addi	$s4, $s4, 1
+			beq	$t5, ' ', remove_space	
+			nop
+			beq	$t5, 0, iterate_infix
+			nop
+			sb	$t5, infix($s5)
+			addi	$s5, $s5, 1
+			j	remove_space
+
+iterate_infix:		lb	$t0, infix($s0)				# doc tung ky tu trong infix
+			beq	$t0, $0, end_iterate_infix		# neu ket thuc xau infix, nhay den end_iterate_infix
+			nop						
+			beq	$t0, '\n', end_iterate_infix		# bo dau xuong dong
+			nop
+			
+			# neu $t0 la toan hang, xet thu tu uu tien cua cac toan hang de nap vao stack						
+			beq	$t0, '+', consider_plus_minus		
+			nop
+			beq	$t0, '-', consider_plus_minus
+			nop
+			beq	$t0, '*', consider_mul_div
+			nop
+			beq	$t0, '/', consider_mul_div
+			nop
+			beq	$t0, '^', push_op_to_stack	# neu gap '^' thi lap tuc dua vao stack
+			nop
+			beq	$t0, '(', consider_lpar		# neu gap '(' thi check so am
+			nop
+			beq	$t0, ')', consider_rpar1
+			nop
+			
+			# neu $t0 la toan tu, dua vao postfix ngay lap tuc
+			sb	$t0, postfix($s1)			
+			addi	$s1, $s1, 1
+			
+			# ===================================================== xu ly so co 2 chu so - doc truoc 1 ky tu
+			addi	$s0, $s0, 1
+			lb	$t2, infix($s0)
+			beq	$t2, '0', continue
+			nop
+			beq	$t2, '1', continue
+			nop
+			beq	$t2, '2', continue
+			nop
+			beq	$t2, '3', continue
+			nop
+			beq	$t2, '4', continue
+			nop
+			beq	$t2, '5', continue
+			nop
+			beq	$t2, '6', continue
+			nop
+			beq	$t2, '7', continue
+			nop
+			beq	$t2, '8', continue
+			nop
+			beq	$t2, '9', continue
+			nop
+			# =====================================================
+			
+			li	$s3, ' '			# them dau cach
+			sb	$s3, postfix($s1)
+			addi	$s1, $s1, 1
+			j	iterate_infix
+			nop
+						
+continue: 		addi	$t3, $s0, 1			# tiep tuc doc truoc 1 ky tu
+			lb	$t4, infix($t3)
+			beq	$t4, '0', gt99_error_popup	# greater than 99
+			nop
+			beq	$t4, '1', gt99_error_popup
+			nop
+			beq	$t4, '2', gt99_error_popup
+			nop
+			beq	$t4, '3', gt99_error_popup
+			nop
+			beq	$t4, '4', gt99_error_popup
+			nop
+			beq	$t4, '5', gt99_error_popup
+			nop
+			beq	$t4, '6', gt99_error_popup
+			nop
+			beq	$t4, '7', gt99_error_popup
+			nop
+			beq	$t4, '8', gt99_error_popup
+			nop
+			beq	$t4, '9', gt99_error_popup
+			nop
+			sb	$t2, postfix($s1)  		# them chu so tiep theo cua so vua nhap vao postfix
+			addi	$s1, $s1, 1
+			li	$s3, ' '			# them dau cach
+			sb	$s3, postfix($s1)
+			addi	$s1, $s1, 1
+			addi	$s0, $s0, 1
+			j 	iterate_infix			# nhay ve iterate_infix de doc ky tu tiep theo
+			nop
+
+gt99_error_popup:	li	$v0, 55
+			la	$a0, msg_error1
+			syscall
+			j	input_infix
+			nop
+			
+# toan hang '+' va '-' co thu tu uu tien ngang nhau
+consider_plus_minus:	beq	$s2, -1, push_op_to_stack	# neu stack rong, nap toan hang dang xet vao stack
+			nop
+			lb	$t9, stack($s2)
+			beq	$t9, '(', push_op_to_stack	# neu dinh stack la dau '(', nap toan hang dang xet vao stack
+			nop
+			lb	$t1, stack($s2)			# else, day tat ca cac toan hang ra khoi stack, sau do nap toan hang dang xet vao
+			sb	$t1, postfix($s1)
+			addi	$s2, $s2, -1
+			addi	$s1, $s1, 1
+			j	consider_plus_minus	
+			nop
+
+# toan hang '*' va '/' co thu tu uu tien ngang nhau
+consider_mul_div:	beq	$s2, -1, push_op_to_stack	# neu stack rong, nap toan hang dang xet vao stack
+			nop
+			lb	$t9, stack($s2)			# neu dinh stack la '+', '-', '(', nap toan hang dang xet vao stack
+			beq	$t9, '+', push_op_to_stack
+			nop
+			beq	$t9, '-', push_op_to_stack
+			nop
+			beq	$t9, '(', push_op_to_stack
+			nop
+			lb	$t1, stack($s2)			# else, dua lan luot cac ky hieu tu stack vao trong postfix
+			sb	$t1, postfix($s1)
+			addi	$s2, $s2, -1
+			addi	$s1, $s1, 1
+			j	consider_mul_div
+			nop
+			
+consider_rpar1:		addi	$a3, $a3, -1
+			j	consider_rpar
+			nop
+			
+consider_rpar:		beq	$s2, -1, push_op_to_stack	# neu stack rong, nap ky kieu vao stack
+			nop
+			lb	$t1, stack($s2)			# else, day toan hang ra khoi stack
+			sb	$t1, postfix($s1)		# dua vao postfix
+			addi	$s2, $s2, -1
+			addi	$s1, $s1, 1
+			beq	$t1, '(', push_op_to_stack	# cho den khi gap dau '(' dau tien duoc dua ra
+			j	consider_rpar
+			nop	
+
+consider_lpar:		addi	$a3, $a3, 1
+			addi	$t3, $s0, 1
+			lb	$t4, infix($t3)
+			beq	$t4, '-', lt0_error_popup	# less than 0
+			nop
+			j	push_op_to_stack
+			nop	
 		
-printResult:	
-	li $v0, 4
-	la $a0, prompt_result
-	syscall
-	li $v0, 2
-	l.s $f12,($t4)				# load gia tri cua $t4 ra con tro $f12
-	syscall
-	li $v0, 11
-	li $a0, '\n'
-	syscall
-ask: 						# tiep tuc khong??
- 	li $v0, 50
- 	la $a0, endMsg
- 	syscall
- 	beq $a0,0,start
- 	beq $a0,2,ask
-# End program
-end:
- 	#li $v0, 55
- 	#la $a0, byeMsg
- 	#li $a1, 1
- 	#syscall
- 	li $v0, 10
- 	syscall
- 
-# Sub program
-EOF:
-	beq $s7,2,wrongInput			# ket thuc khi gap toan tu hoac dau ngoac mo
-	beq $s7,3,wrongInput
-	beq $t5,-1,wrongInput			# -1 thì không có dau vao
-	j popAllOperatorInStack
-digit1:
-	beq $t4,'0',storeDigit1
-	beq $t4,'1',storeDigit1
-	beq $t4,'2',storeDigit1
-	beq $t4,'3',storeDigit1
-	beq $t4,'4',storeDigit1
-	beq $t4,'5',storeDigit1
-	beq $t4,'6',storeDigit1
-	beq $t4,'7',storeDigit1
-	beq $t4,'8',storeDigit1
-	beq $t4,'9',storeDigit1
-	j continueScan
-	
-digit2: 
-	beq $t4,'0',storeDigit2
-	beq $t4,'1',storeDigit2
-	beq $t4,'2',storeDigit2
-	beq $t4,'3',storeDigit2
-	beq $t4,'4',storeDigit2
-	beq $t4,'5',storeDigit2
-	beq $t4,'6',storeDigit2
-	beq $t4,'7',storeDigit2
-	beq $t4,'8',storeDigit2
-	beq $t4,'9',storeDigit2
-	# neu khong nhap vao chu so thu 2
-	jal numberToPostfix
-	j continueScan
-digit3: 
-	# neu scan ra chu so thu 3 --> error
-	beq $t4,'0',wrongInput
-	beq $t4,'1',wrongInput
-	beq $t4,'2',wrongInput
-	beq $t4,'3',wrongInput
-	beq $t4,'4',wrongInput
-	beq $t4,'5',wrongInput
-	beq $t4,'6',wrongInput
-	beq $t4,'7',wrongInput
-	beq $t4,'8',wrongInput
-	beq $t4,'9',wrongInput
-	# neu khong co chu so thu  3
-	jal numberToPostfix
-	j continueScan
-plusMinus:					# Input is + -
-	beq $s7,2,wrongInput			# Nhan toán tu sau toán tu hoac "("
-	beq $s7,3,wrongInput
-	beq $s7,0,wrongInput			# nhan toan tu truoc bat ki so nao
-	li $s7,2					# Thay doi trang thai dau  vào thành 2
-	continuePlusMinus:
-	beq $t6,-1,inputOperatorToStack		# Không có gì trong  stack -> day vao
-	add $t8,$t6,$t3				# Load dia chi cua toan tu o dinh
-	lb $t7,($t8)				# Load byte giá tri cua toan tu o dinh
-	beq $t7,'(',inputOperatorToStack		# neu dinh là ( --> day vào
-	beq $t7,'+',equalPrecedence		# neu dinh là + - --> day vào
-	beq $t7,'-',equalPrecedence
-	beq $t7,'*',lowerPrecedence		# neu dinh là * / thi lay * / ra roi day vao
-	beq $t7,'/',lowerPrecedence
-multiplyDivide:					# dau vào là * /
-	beq $s7,2,wrongInput			# Nhan toán tu sau toán tu hoac "("
-	beq $s7,3,wrongInput
-	beq $s7,0,wrongInput			# Nhan toán tu truoc bat ki so nào
-	li $s7,2					# Thay doi trang thai dau vào thành 2
-	beq $t6,-1,inputOperatorToStack		# Không có gì trong  stack -> day vào
-	add $t8,$t6,$t3				# Load dia chi cua toan tu o dinh
-	lb $t7,($t8)				# Load bytegiá tri cua toan tu o dinh
-	beq $t7,'(',inputOperatorToStack		# neu dinh là ( --> day vào
-	beq $t7,'+',inputOperatorToStack		# neu dinh là + - --> day vào
-	beq $t7,'-',inputOperatorToStack
-	beq $t7,'*',equalPrecedence		# neu dinh là * / day vao
-	beq $t7,'/',equalPrecedence
-openBracket:					# dau vào là (
-	beq $s7,1,wrongInput			# Nhan "(" sau mot so hoac dau ")"
-	beq $s7,4,wrongInput	
-	li $s7,3					# Thay doi trang thai dau vào thành 3
-	j inputOperatorToStack
-closeBracket:					# dau vao la  ")"
-	beq $s7,2,wrongInput			# Nhan ")" sau mot toán tu hoac toán tu
-	beq $s7,3,wrongInput	
-	li $s7,4					# Thay doi trang thai dau vào thành 4
-	add $t8,$t6,$t3				# Load dia chi toán tu dinh  
-	lb $t7,($t8)				# Load giá tri cua toan tu o dinh
-	beq $t7,'(',wrongInput			# Input bao gom () không có gì o giua  --> error
-	continueCloseBracket:
-	beq $t6,-1,wrongInput			# không tìm duoc dau "(" --> error
-	add $t8,$t6,$t3				# Load dia chi cua toan tu o dinh
-	lb $t7,($t8)				# Load gia tri cua toan tu o dinh
-	beq $t7,'(',matchBracket			# Tìm ngoac phu hop
-	jal PopOpeatorToPostfix			# day toan tu o dinh vào postfix
-	j continueCloseBracket			# tiep tuc vong lap cho den khi tim duoc ngoac phu hop		
-equalPrecedence:					#  nhan + - và dinh stack là + - || nhan * / và dinh stack là * /
-	jal PopOpeatorToPostfix			# lay toan tu dinh stack ra Postfix
-	j inputOperatorToStack			# day toan tu moi vào stack 
-lowerPrecedence:					# nhan + - và dinh stack * /
-	jal PopOpeatorToPostfix			# lay toan tu dinh stack ra va day vào postfix
-	j continuePlusMinus			# tiep tuc vong lap
-inputOperatorToStack:				# day dau vào cho toán tu
-	add $t6,$t6,1				# tang offset cua toan tu o dinh lên 1
-	add $t8,$t6,$t3				# load dia chi cua  toán tu o dinh
-	sb $t4,($t8)				# luu toan tu nhap vao stack
-	j scanInfix
-PopOpeatorToPostfix:				# lay toan tu o dinh va luu vào postfix
-	addi $t5,$t5,1				# tang offet cua toan tu o dinh stack lên 1
-	add $t8,$t5,$t2				# load dia chi cua toan tu o dinh stack
-	addi $t7,$t7,100				# mã hóa toán tu + 100
-	sb $t7,($t8)				# luu toan tu vào postfix
-	addi $t6,$t6,-1				# giam offset cua toan tu o dinh stack di 1
-	jr $ra
-matchBracket:					# xóa cap dau ngoac
-	addi $t6,$t6,-1				# giam offset cua toan tu o dinh stack di 1
-	j scanInfix
-popAllOperatorInStack:						# lay het toan tu vao postfix
-	jal numberToPostfix
-	beq $t6,-1,finishScan			# stack rong --> ket thuc
-	add $t8,$t6,$t3				# lay dia chi cua toan tu o dinh stack 
-	lb $t7,($t8)				# lay gia tri cua toan tu o dinh stack
-	beq $t7,'(',wrongInput			# ngoac khong phu hop --> error
-	beq $t7,')',wrongInput
-	jal PopOpeatorToPostfix
-	j popAllOperatorInStack					# lap cho den khi stack rong
-storeDigit1:
-	beq $s7,4,wrongInput			# nhan vao so sau  ")"
-	addi $s4,$t4,-48				# luu chu so dau tien duoi dang so ma ascii cua chu so 0 la 48
-	add $t9,$zero,1				# Thay doi trang thai thanh 1 
-	li $s7,1
-	j scanInfix
-storeDigit2:
-	beq $s7,4,wrongInput			# nhan vao so sau  ")"
-	addi $s5,$t4,-48				# luu chu so thu hai duoi dang so
-	mul $s4,$s4,10
-	add $s4,$s4,$s5				# luu number = first digit * 10 + second digit
-	add $t9,$zero,2				# thay doi trang thái thành 2 
-	li $s7,1
-	j scanInfix
-numberToPostfix:
-	beq $t9,0,endnumberToPostfix
-	addi $t5,$t5,1
-	add $t8,$t5,$t2			
-	sb $s4,($t8)				# luu so vao postfix
-	add $t9,$zero,$zero			# thay doi trang thai ve 0
-	endnumberToPostfix:
-	jr $ra
+lt0_error_popup:	li	$v0, 55
+			la	$a0, msg_error2
+			syscall
+			j	input_infix
+			nop			
+			
+push_op_to_stack:	addi	$s2, $s2, 1
+			sb	$t0, stack($s2)
+			addi	$s0, $s0, 1
+			j 	iterate_infix
+			nop
+
+# dua toan bo toan hang con lai cua stack ra khoi ngan xep, va push vao postfix
+end_iterate_infix:	beq	$s2, -1, remove_parentheses
+			nop
+			lb	$t0, stack($s2)
+			sb	$t0, postfix($s1)
+			addi	$s2, $s2, -1
+			addi	$s1, $s1, 1
+			j	end_iterate_infix
+			nop
+
+# bo dau ngoac trong postfix
+remove_parentheses:	lb	$t5, postfix($s6)
+			addi	$s6, $s6, 1
+			beq	$t5, '(', remove_parentheses
+			nop
+			beq	$t5, ')', remove_parentheses
+			nop
+			beq	$t5, 0, print_postfix		# neu gap ky tu rong -> duyet xong postfix -> in ra postfix_
+			nop
+			sb	$t5, postfix_($s7)
+			addi	$s7, $s7, 1
+			j	remove_parentheses
+			nop
+				
+print_postfix:		li	$v0, 4
+			la	$a0, msg_print_postfix
+			syscall
+			li $v0, 4
+			la $a0, postfix_
+			syscall
+			li	$v0, 4
+			la	$a0, msg_enter
+			syscall
+			bne	$a3, 0, error1
+			nop
+			j	calculate_postfix
+			nop
+			
+error1:			li	$v0, 55
+			la	$a0, msg_error4
+			syscall
+			j	input_infix
+			nop
+
+# 2. tinh postfix
+calculate_postfix:	li	$s1, 0		# set lai bien duyet postfix
+			li	$s2, 1		# biet dem de tinh ham mu
+			li	$t5, 1		# phuc vu cho viec tinh ham mu
+
+iterate_postfix: 	lb	$t0, postfix_($s1)
+			beq	$t0, 0, printf_result
+			nop
+			beq	$t0, ' ', eliminate_space
+			nop
+			beq	$t0, '0', continue_		# neu gap chu so thi doc tiep ky tu tiep theo
+			nop
+			beq	$t0, '1', continue_
+			nop
+			beq	$t0, '2', continue_
+			nop
+			beq	$t0, '3', continue_
+			nop
+			beq	$t0, '4', continue_
+			nop
+			beq	$t0, '5', continue_
+			nop
+			beq	$t0, '6', continue_
+			nop
+			beq	$t0, '7', continue_
+			nop
+			beq	$t0, '8', continue_
+			nop
+			beq	$t0, '9', continue_
+			nop
+			
+			sge	$t8, $t0, 65			# neu gap chu cai thi yeu cau nhap gia tri cho chu cai do
+			beq	$t8, 1, letter_condition1
+			nop
+			
+operand:		lw	$t6, -8($sp)
+			lw	$t7, -4($sp)
+			addi	$sp, $sp, -8
+			
+			beq	$t0, '+', add_			# neu gap phep toan thi thuc hien phep toan nay voi 2 toan hang duoc lay ra tu ngan xep
+			nop
+			beq	$t0, '-', sub_
+			nop
+			beq	$t0, '/', div_
+			nop
+			beq	$t0, '*', mul_
+			nop
+			beq	$t0, '^', exp_
+			nop
+			addi 	$s1, $s1, 1
+			j	iterate_postfix
+			
+letter_condition1:	sle	$t8, $t0, 90
+			beq	$t8, 0, letter_condition2
+			nop
+			li	$v0, 51
+			la	$a0, msg_enter_value
+			syscall
+			sw	$a0, 0($sp)
+			addi	$sp, $sp, 4
+			addi	$s1, $s1, 1
+			j	iterate_postfix
+			
+letter_condition2:	sge	$t8, $t0, 97
+			beq	$t8, 1, letter_condition3
+			nop
+			j	operand
+
+letter_condition3:	sle	$t8, $t0, 122
+			beq	$t8, 0, operand
+			nop
+			li	$v0, 51
+			la	$a0, msg_enter_value
+			syscall
+			sw	$a0, 0($sp)
+			addi	$sp, $sp, 4
+			addi	$s1, $s1, 1
+			j	iterate_postfix
+			
+eliminate_space:	addi	$s1, $s1, 1
+			j	iterate_postfix
+			nop
+
+continue_:		
+			addi	$s1, $s1, 1
+			lb	$t2, postfix_($s1)
+			beq	$t2, '0', push_number_to_stack		# neu ky tu tiep theo cung la chu so thi push so co 2 c/so nay vao trong stack
+			nop
+			beq	$t2, '1', push_number_to_stack
+			nop
+			beq	$t2, '2', push_number_to_stack
+			nop
+			beq	$t2, '3', push_number_to_stack
+			nop
+			beq	$t2, '4', push_number_to_stack
+			nop
+			beq	$t2, '5', push_number_to_stack
+			nop
+			beq	$t2, '6', push_number_to_stack
+			nop
+			beq	$t2, '7', push_number_to_stack
+			nop
+			beq	$t2, '8', push_number_to_stack
+			nop
+			beq	$t2, '9', push_number_to_stack
+			nop
+			
+			# neu $t2 ko la chu so, tuc la doc duoc so co 1 c/so, cung push vao stack
+			addi	$t0, $t0, -48			# chuyen tu ky tu sang so, VD: tu '1' sang so 1
+			sw	$t0, 0($sp)
+			addi	$sp, $sp, 4
+			
+			j	iterate_postfix
+			
+push_number_to_stack:	addi	$t0, $t0, -48
+			addi	$t2, $t2, -48
+			mul	$t3, $t0, 10
+			add	$t3, $t3, $t2			# neu gap so co 2 chu so thi lay $t3 = 10 * $t1 + $t2
+			sw	$t3, 0($sp)
+			addi 	$sp, $sp, 4
+			addi	$s1, $s1, 1
+			j	iterate_postfix
+			
+add_:			add	$t6, $t6, $t7
+			sw	$t6, 0($sp)
+			addi	$sp, $sp, 4
+			addi	$s1, $s1, 1
+			j	iterate_postfix
+			nop
+			
+sub_:			sub	$t6, $t6, $t7
+			sw	$t6, 0($sp)
+			addi	$sp, $sp, 4
+			addi	$s1, $s1, 1
+			j	iterate_postfix
+			nop
+			
+div_:			beq	$t7, 0, invalid_dividend	# kiem tra so bi chia khac 0
+			nop
+			div	$t6, $t6, $t7
+			sw	$t6, 0($sp)
+			addi	$sp, $sp, 4
+			addi	$s1, $s1, 1
+			j	iterate_postfix
+			nop
+			
+invalid_dividend:	li	$v0, 55
+			la	$a0, msg_error3
+			syscall
+			j	input_infix
+			nop
+			
+mul_:			mul	$t6, $t6, $t7
+			sw	$t6, 0($sp)
+			addi	$sp, $sp, 4
+			addi	$s1, $s1, 1
+			j	iterate_postfix
+			nop
+			
+exp_:			beq	$t7, 0, zero_power		# check so mu = 0
+			nop
+			mul	$t5, $t5, $t6
+			slt	$s3, $s2, $t7
+			addi	$s2, $s2, 1
+			beq	$s3, 1, exp_
+			nop
+			sw	$t5, 0($sp)
+			addi	$sp, $sp, 4
+			addi	$s1, $s1, 1
+			j 	iterate_postfix
+
+zero_power:		li	$t4, 1
+			sw	$t4, 0($sp)
+			addi	$sp, $sp, 4
+			addi	$s1, $s1, 1
+			j	iterate_postfix
+
+printf_result:		li	$v0, 4
+			la	$a0, msg_print_result
+			syscall
+			li	$v0, 1
+			lw	$t4, -4($sp)
+			la	$a0, ($t4)
+			syscall
+			li	$v0, 4
+			la	$a0, msg_enter
+			syscall
+			
