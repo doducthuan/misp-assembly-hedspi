@@ -5,7 +5,7 @@
 # - Nhap vao bieu thuc trung to
 # - In ra bieu thuc hau to 
 # - In ra ket qua cua bieu thuc trung to
-# - Ho tro cac phep toan: cong, tru, nha, chia lay thuong, luy thua
+# - Ho tro cac phep toan: cong, tru, nha, chia lay thuong
 # - Kiem tra cac truong hop dac biet:
 #	+ So nam ngoai doan [0, 99]
 #	+ Chia cho 0
