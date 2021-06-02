@@ -12,7 +12,7 @@
 # 	+ Luy thua mu 0
 #	+ Cho phep nhap bien va nhap gia tri cua bien
 # 	+ Kiem tra dau ngoac
-# - Chua co menu
+# 
 #=================================================================================================
 
 .data
