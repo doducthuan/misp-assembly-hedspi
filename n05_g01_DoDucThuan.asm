@@ -1,6 +1,6 @@
 # ================================================================================================
 #				   BIEU THUC TRUNG TO HAU TO - MIPS CODE
-#				 © 2017 Le Thi Khanh. All rights reserved.
+#				 
 # Chuc nang:
 # - Nhap vao bieu thuc trung to
 # - In ra bieu thuc hau to 
