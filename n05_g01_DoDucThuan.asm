@@ -1,446 +1,333 @@
-
-############## De ##############
-
-#Bieu thuc trung to hau to
-
-################################
 .data
-infix: .space 256
-postfix: .space 256
-stack: .space 256
-prompt:	.asciiz "Nhap bieu thuc trung to\nChi nhap so nguyen va khong chua ki hieu dac biet va bo dau '('"
-newLine: .asciiz "\n"
-prompt_postfix: .asciiz "PostFix is: "                # Khai bao string cho nhan
-prompt_result: .asciiz "Result is: "                  # Khai bao string cho nhan
-prompt_infix: .asciiz "Infix is: "                    # Khai bao string cho nhan
-
-# Nhan tien to
+	infix: .space 256
+	postfix: .space 256
+	operator: .space 256
+	endMsg: .asciiz "continue??"
+	errorMsg: .asciiz "input not correct"
+	startMsg: .asciiz "please enter infix\nNote: contain + - * / ()\nnumber from 00-99"
+	prompt_postfix: .asciiz "postfix expression: "
+	prompt_result: .asciiz "result: "
+	prompt_infix: .asciiz "infix expression: "
+	converter: .word 1
+	wordToConvert: .word 1
+	stack: .float
 .text
- li $v0, 54                                           # Dat gia tri cho $v0
- la $a0, prompt                                       # Loi goi den string
- la $a1, infix                                        # Loi goi den string
- la $a2, 256                                          # Dat gia tri cho $a2
- syscall                                              # Thuc hien
-  
-la $a0, prompt_infix                                  # Loi goi den string
-li $v0, 4                                             # Dat gia tri cho $v0
-syscall                                               # Thuc hien
-	
-la $a0, infix                                         # Thiet lap dia cho nhan cho $a0
-li $v0, 4                                             # Dat gia tri cho $v0
-syscall                                               # Thuc hien
-
-# chuyen doi sang hau to
-
-li $s6, -1                                            # counter
-li $s7, -1                                            # Scounter
-li $t7, -1                                            # Pcounter
-while:
-        la $s1, infix                                 #buffer = $s1
-        la $t5, postfix                               #postfix = $t5
-        la $t6, stack                                 #stack = $t6
-        li $s2, '+'                                   # $s2 = '+'
-        li $s3, '-'                                   # $s3 = '-'
-        li $s4, '*'                                   # $s4 = '*'
-        li $s5, '/'                                   # $s5 = '/'
-	addi $s6, $s6, 1                              # Tang gia tri len 1
-	
-# get buffer[counter]
-	add $s1, $s1, $s6                             
-	lb $t1, 0($s1)	                              # t1 = value of buffer[counter]
-	
-	beq $t1, $s2, operator # '+'                  # so sanh input voi toan tu
-	nop                                           # lenh tre
-	beq $t1, $s3, operator # '-'                  # so sanh input voi toan tu
-	nop                                           # lenh tre
-	beq $t1, $s4, operator # '*'                  # so sanh input voi toan tu
-	nop                                           # lenh tre
-	beq $t1, $s5, operator # '/'                  # so sanh input voi toan tu
-	nop                                           # lenh tre
-	beq $t1, 10, n_operator # '\n'                # so sanh input voi lenh xuong dong
-	nop                                           # lenh tre
-	beq $t1, 32, n_operator # ' '                 # so sanh input voi khoang trong
-	nop                                           # lenh tre
-	beq $t1, $zero, endWhile                      # so sanh input voi 0
-	nop                                           # lenh tre
-	
-# Day so den hau to
-	addi $t7, $t7, 1                              # tang gia tri len 1          
-	add $t5, $t5, $t7                             # $t5 = $t5 + $t7
-	sb $t1, 0($t5)                                # store byte: ghi $t1 -> $t5
-	lb $a0, 1($s1)                                # load byte  
-	jal check_number                              # chuyen den nhan check so
-	nop                                           # lenh tre
-	beq $v0, 1, n_operator                        # so sanh gia tri $v0 va chuyen huong neu trung
-	nop                                           # lenh tre
-	#Khoang Cach
-	add_space:
-	add $t1, $zero, 32                            # $t1 = 32
-	sb $t1, 1($t5)                                # store byte den $t1
-	addi $t7, $t7, 1                              # tang $t7 them 1
-	j n_operator                                  # chuyen huong den n_operator
-	nop                                           # lenh tre
-	operator:
-# add to stack ...	
-	beq $s7, -1, pushToStack                      # so sanh $s7 va dieu huong neu giong
-	nop                                           # lenh tre
-	add $t6, $t6, $s7                             # $t6 = $t6 + $s7
-	lb $t2, 0($t6)                                # t2 = value of stack[counter]
-# check t1 precedence
-	beq $t1, $s2, t1to1                           # so sanh       
-	nop                                           # lenh tre
-	beq $t1, $s3, t1to1                           # so sanh
-	nop                                           # lenh tre
-	li $t3, 2                                     # gan gia tri
-	j check_t2                                    # link den nhan check_t2
-	nop	                                      # lenh tre
-t1to1:
-	li $t3, 1                                     # gan gia tri $t3
-# check t2 precedence
-check_t2:
-	beq $t2, $s2, t2to1                           # so sanh
-	nop                                           # lenh tre
-	beq $t2, $s3, t2to1                           # so sanh
-	nop                                           # lenh tre
-	li $t4, 2	                              # gan gia tri
-	j compare_precedence                          # chuyen den nhan compare_precedence
-	nop                                           # lenh tre
-	
-t2to1:
-	li $t4, 1	                              # gan gia tri
-	
-compare_precedence:
-	
-	beq $t3, $t4, equal_precedence                # so sanh
-	nop                                           # lenh tre
-	slt $s1, $t3, $t4                             # so sanh <  then $s1 =1
-	beqz $s1, t3_large_t4                         # j t3_large_t4 if $s1=0                          
-	nop                                           # lenh tre
-################	
-# t3 < t4
-# pop t2 from stack  and t2 ==> postfix  
-# get new top stack do again
-
-	sb $zero, 0($t6)                              # store byte
-	addi $s7, $s7, -1                             # giam gia tri
-	addi $t6, $t6, -1                             # gian gia tri
-	la $t5, postfix                               # postfix = $t5
-	addi $t7, $t7, 1                              # tang gia tri
-	add $t5, $t5, $t7                             # thuc hien cong
-	sb $t2, 0($t5)                                # ghi byte
-	
-#addi $s7, $s7, -1  # scounter = scounter - 1
-	j operator                                    # den nhan operator
-	nop                                           # lenh tre
-	
-################	
-t3_large_t4:
-# push t1 to stack
-	j pushToStack                                 # nhay den nhan pushToStack
-	nop                                           # lenh tre
-################
-equal_precedence:
-# pop t2  from stack  and t2 ==> postfix  
-# push to stack
-
-	sb $zero, 0($t6)                              # ghi byte
-	addi $s7, $s7, -1                             # giam gia tri
-	addi $t6, $t6, -1                             # giam gia tri
-	la $t5, postfix                               #postfix = $t5 
-	addi $t7, $t7, 1                              # tang gia tri 
-	add $t5, $t5, $t7                             # thuc hien lenh cong
-	 
-	sb $t2, 0($t5)                                # ghi byte
-	j pushToStack                                 # nhay den nhan pushToStack
-	nop                                           # lenh tre
-################
-pushToStack:
-
-	la $t6, stack                                 #stack = $t6
-	addi $s7, $s7, 1                              # scounter ++
-	add $t6, $t6, $s7                             # Lenh cong
-	sb $t1, 0($t6)	                              # ghi byte den $t1
-	
-	n_operator:	
-	j while	                                      # nhay den while
-	nop                                           # lenh tre
-	
-#######################
-endWhile:
-	addi $s1, $zero, 32                           # $s1=32
-	addi $t7, $t7, 1                              # tang gia tri                       
-	add $t5, $t5, $t7 
-	la $t6, stack                                 # $t6= stack
-	add $t6, $t6, $s7                             # thuc hien lenh cong thanh ghi
-	
-popallstack:
-
-	lb $t2, 0($t6)                                # t2 = value of stack[counter]
-	beq $t2, 0, endPostfix                        #phep so sanh
-	sb $zero, 0($t6)                              # ghi byte
-	addi $s7, $s7, -2                             # cong hang so
-	add $t6, $t6, $s7                             # thuc hien phep cong
-	
-	sb $t2, 0($t5)                                # ghi byte
-	add $t5, $t5, 1                               # thuc hien lenh cong
-	j popallstack                                 # nhay den nhan papallstack
-	nop                                           # lenh tre
-
-endPostfix:
-############################################################################### END POSTFIX
-# print postfix
-la $a0, prompt_postfix                               # $a0 = prompt_postfix
-li $v0, 4                                            # gan gia tri
-syscall                                              # thuc hien
-
-la $a0, postfix                                      # $a0 = postfix
-li $v0, 4                                            # gan gia tri
-syscall                                              # thuc hien
-
-la $a0, newLine                                      # $a0 = '\n'
-li $v0, 4                                            # gan gia tri
-syscall                                              # thuc hien
-
-
-############################################################################### Caculate
-
-li $s3, 0                                           # gan gia tri
-la $s2, stack                                       #stack = $s2
-
-
-# postfix to stack
-while_p_s:
-	la $s1, postfix                             #postfix = $s1
-	add $s1, $s1, $s3                           # thuc hien phep cong
-	lb $t1, 0($s1)                              # load byte
-# if null
-	beqz $t1 end_while_p_s                      # if $t1=0 then lable end_while_p_s
-	nop                                         # gan gia tri
-	add $a0, $zero, $t1                         # lenh cong
-	jal check_number                            # nhay den check_number
-	nop                                         # gan gia tri
-	beqz $v0, is_operator                       # if $v0 =0 then is_operator
-	nop                                         # gan gia tri
-	jal add_number_to_stack                     # nhay den add_number_to_stack
-	nop                                         # gan gia tri
-	j continue                                  # nhay den nhan continue
-	nop                                         # lenh tre
-	
-is_operator:
-	jal pop                                     # nhay den pop
-	nop                                         # lenh tre
-	add $a1, $zero, $v0                         # thuc hien lenh cong
-	jal pop                                     # nhay den pop
-	nop                                         # lenh tre
-	add $a0, $zero, $v0                         # lenh cong	
-	add $a2, $zero, $t1                         # lenh cong
-	jal caculate                                # nhay den caculate
-	nop                                         # lenh tre
-continue:
-	add $s3, $s3, 1                            # counter++
-	j while_p_s                                # nhay den while_p_s
-	nop                                        # lenh tre
-#-----------------------------------------------------------------
-#Procedure caculate
-# @brief caculate the number ("a op b")
-# @param[int] a0 : (int) a
-# @param[int] a1 : (int) b
-# @param[int] a2 : operator(op) as character
-#-----------------------------------------------------------------
-caculate:
-	sw $ra, 0($sp)                             # ghi byte
-	li $v0, 0                                  # gan gia tri
-	beq $t1, '*', cal_case_mul                 # so sanh toan tu
-	nop                                        # lenh tre
-	beq $t1, '/', cal_case_div                 # so sanh toan tu
-	nop                                        # lenh tre
-	beq $t1, '+', cal_case_plus                # so sanh toan tu
-	nop                                        # lenh tre
-	beq $t1, '-', cal_case_sub                 # so sanh toan tu
-	
-	cal_case_mul:
-		mul $v0, $a0, $a1                  # thuc hien phep nhan
-		j cal_push                         # nhay den cal_push
-		nop                                # lenh tre
-	cal_case_div:
-		div $a0, $a1                       # gan bit cao
-		mflo $v0                        
-		j cal_push                         # nhay den cal_push
-		nop                                #lenh tre
-	cal_case_plus:
-		add $v0, $a0, $a1                  # phep cong
-		j cal_push                         # nhay den cal_push
-		nop                                #lenh tre 
-	cal_case_sub:
-		sub $v0, $a0, $a1                  # thuc hien phep tru
-		j cal_push                         # nhay den cal_push
-		nop                                # lenh tre
-	cal_push:
-		add $a0, $v0, $zero                # phep gan
-		jal push                           # nhay den push
-		nop                                #lenh tre
-		lw $ra, 0($sp)                     # tro ve
-		jr $ra                             # tro ve
-		nop                                #lenh tre
-	
-
-
-#-----------------------------------------------------------------
-#Procedure add_number_to_stack
-# @brief get the number and add number to stack at $s2
-# @param[in] s3 : counter for postfix string
-# @param[in] s1 : postfix string
-# @param[in] t1 : current value
-#-----------------------------------------------------------------
-add_number_to_stack:
-	# save $ra
-	sw $ra, 0($sp)
-	li $v0, 0
-	while_ants:
-		beq $t1, '0', ants_case_0                        # so sanh if = then lable
-		nop                                               # lenh tre
-		beq $t1, '1', ants_case_1                         # so sanh if = then lable
-		nop                                               # lenh tre                       
-		beq $t1, '2', ants_case_2                        # so sanh if = then lable
-		nop                                               # lenh tre
-		beq $t1, '3', ants_case_3                        # so sanh if = then lable
-		nop                                               # lenh tre
-		beq $t1, '4', ants_case_4                        # so sanh if = then lable
-		nop                                               # lenh tre
-		beq $t1, '5', ants_case_5                        # so sanh if = then lable
-		nop                                               # lenh tre
-		beq $t1, '6', ants_case_6                        # so sanh if = then lable
-		nop                                               # lenh tre
-		beq $t1, '7', ants_case_7                        # so sanh if = then lable
-		nop                                               # lenh tre
-		beq $t1, '8', ants_case_8                        # so sanh if = then lable
-		nop                                               # lenh tre
-		beq $t1, '9', ants_case_9                        # so sanh if = then lable
-		nop                                               # lenh tre
+start:
+# nhap vao bieu thuc trung to
+	li $v0, 54
+	la $a0, startMsg
+	la $a1, infix
+ 	la $a2, 256
+ 	syscall
+ 	beq $a1,-2,end			# if cancel then end 
+ 	beq $a1,-3,start			# if enter then start
+# in bieu thuc trung to  
+	li $v0, 4
+	la $a0, prompt_infix
+	syscall
+	li $v0, 4
+	la $a0, infix
+	syscall
+	li $v0, 11
+	li $a0, '\n'
+	syscall
+# khoi tao cac trang thai
+	li $s7,0					# bien trang thai $s7 
+					
+						# trang thai "1"  nhan vao so (0 -> 99)
+						# trang thai "2"  nhan vao toan tu(* / + -)
+						# trang thai "3"  nhan vao dau "("
+						# trang thai "4"  nhan vao dau ")"
+	li $t9,0					# dem so chu so?
+	li $t5,-1				# luu dinh cua offset postfix
+	li $t6,-1				# luu dinh cua offset toan tu
+	la $t1, infix				# load cac dia chi cua cac offset
+	la $t2, postfix
+	la $t3, operator	
+	addi $t1,$t1,-1				# Set dia chi khoi tao infix la -1
+# chuyen sang postfix
+scanInfix: 					# Loop for each moi ki tu trong postfix
+# kiem tra dau vao
+	addi $t1, $t1, 1				# tang vi tri con tro infix len 1 don vii = i + 1 
+	lb $t4, ($t1)				# lay gia tri cua con tro infix hien tai
+	beq $t4, ' ', scanInfix			# neu la space tiep tuc scan
+	beq $t4, '\n', EOF			# Scan ket thuc pop tat ca cac toan tu sang postfix
+	beq $t9, 0, digit1			# Neu trang thai là 0 => co 1 chu so
+	beq $t9, 1, digit2			# Neu trang thai là 1 => co 2 chu so
+	beq $t9, 2, digit3			# neu trang thai là 2 => co 3 chu so
+	continueScan:
+	beq $t4, '+', plusMinus			# kiem tra ki tu hien tai $t4
+	beq $t4, '-', plusMinus
+	beq $t4, '*', multiplyDivide
+	beq $t4, '/', multiplyDivide
+	beq $t4, '(', openBracket
+	beq $t4, ')', closeBracket
+wrongInput:					# dau vao loi
+	li $v0, 55
+ 	la $a0, errorMsg
+ 	li $a1, 2
+ 	syscall
+ 	j ask
+finishScan:
+# in bieu thuc infix
+	# Print prompt:
+	li $v0, 4
+	la $a0, prompt_postfix
+	syscall
+	li $t6,-1				# set gia tri infix hien tai là -1 $s6= -1
+printPostfix:
+	addi $t6,$t6,1				# tang offset cua postfix hien tai 
+	add $t8,$t2,$t6				# load dia chi cua postfix hien tai
+	lbu $t7,($t8)				# Load gia tri cua postfix hien tai
+	bgt $t6,$t5,finishPrint			# in ra postfix --> tính ket qua
+	bgt $t7,99,printOperator			# neu postfix hien tai> 99 --> la mot toan tu
+	# Neu khong thi la mot toan hang
+	li $v0, 1
+	add $a0,$t7,$zero
+	syscall
+	li $v0, 11
+	li $a0, ' '
+	syscall
+	j printPostfix				# Loop
+	printOperator:
+	li $v0, 11
+	addi $t7,$t7,-100			# Decode toán tu
+	add $a0,$t7,$zero
+	syscall
+	li $v0, 11
+	li $a0, ' '
+	syscall
+	j printPostfix				# Loop
+finishPrint:
+	li $v0, 11
+	li $a0, '\n'
+	syscall
+# tính toán ket 	qua
+	li $t9,-4				# set offset cua dinh stack là -4
+	la $t3,stack				# Load dia chi dinh stack 
+	li $t6,-1				# Load offset cua Postfix hien tai là -1
+	l.s $f0,converter			# Load converter
+CalculatorPost:	
+	addi $t6,$t6,1				# tang offset hien tai cua Postfix  
+	add $t8,$t2,$t6				# Load dia chi cua postfix hien tai
+	lbu $t7,($t8)				# Load gia tri cua postfix hien tai
+	bgt $t6,$t5,printResult			# tính toán ket qua va in ra
+	bgt $t7,99,calculate			# neu gia tri postfix hien tai > 99 --> toan tu --> lay ra 2 toan hang va tính toán
+	# neu khong thi la toan hang
+	addi $t9,$t9,4				# tang offset dinh stack len 
+	add $t4,$t3,$t9				# tang dia chi cua dinh stack
+	sw $t7,wordToConvert	
+	l.s $f10,wordToConvert			# Bien $f10 la bien trung gian luu gia tri tam thoi
+	div.s $f10,$f10,$f0
+	s.s $f10,($t4)				# day so vào stack
+	sub.s $f10,$f10,$f10			# Reset f10
+	j CalculatorPost				# Loop
+	calculate:	
+		# Pop 1 so
+		add $t4,$t3,$t9		
+		l.s $f3,($t4)
+		# pop so tiep theo
+		addi $t9,$t9,-4
+		add $t4,$t3,$t9		
+		l.s $f2,($t4)
+		# Decode toán tu
+		beq $t7,143,plus
+		beq $t7,145,minus
+		beq $t7,142,multiply
+		beq $t7,147,divide
+		plus:
+			add.s $f1,$f2,$f3	# tinh tong gia tri cua 2 con tro dang luu gia tri toan hang
+			s.s $f1,($t4)		# luu gia tri cua con tro ra $t4
+			sub.s $f2,$f2,$f2	# Reset f2 f3
+			sub.s $f3,$f3,$f3	
+			j CalculatorPost
+		minus:
+			sub.s $f1,$f2,$f3
+			s.s $f1,($t4)	
+			sub.s $f2,$f2,$f2	# Reset f2 f3
+			sub.s $f3,$f3,$f3
+			j CalculatorPost
+		multiply:
+			mul.s $f1,$f2,$f3
+			s.s $f1,($t4)	
+			sub.s $f2,$f2,$f2	# Reset f2 f3
+			sub.s $f3,$f3,$f3
+			j CalculatorPost
+		divide:
+			div.s $f1,$f2,$f3
+			s.s $f1,($t4)	
+			sub.s $f2,$f2,$f2	# Reset f2 f3
+			sub.s $f3,$f3,$f3
+			j CalculatorPost
 		
-		ants_case_0:
-			j ants_end_sw_c                          # nhay den lable
-			nop                                      # lenh tre  
-		ants_case_1:
-			addi $v0, $v0, 1	                 # cong hang so
-			j ants_end_sw_c                          # nhay den lable
-			nop                                      # lenh tre
-		ants_case_2:
-			addi $v0, $v0, 2	                 # cong hang so
-			j ants_end_sw_c                          # nhay den lable
-			nop                                      # lenh tre
-		ants_case_3:
-			addi $v0, $v0, 3	                 # cong hang so
-			j ants_end_sw_c                          # nhay den lable
-			nop                                      # lenh tre
-		ants_case_4:
-			addi $v0, $v0, 4	                 # cong hang so
-			j ants_end_sw_c                          # nhay den lable
-			nop                                      # lenh tre
-		ants_case_5:
-			addi $v0, $v0, 5	                 # cong hang so
-			j ants_end_sw_c                          # nhay den lable
-			nop                                      # lenh tre
-		ants_case_6:
-			addi $v0, $v0, 6	                 # cong hang so
-			j ants_end_sw_c                          # nhay den lable
-			nop                                      # lenh tre
-		ants_case_7:
-			addi $v0, $v0, 7	                 # cong hang so
-			j ants_end_sw_c                          # nhay den lable
-			nop                                      # lenh tre
-		ants_case_8:
-			addi $v0, $v0, 8	                 # cong hang so
-			j ants_end_sw_c                          # nhay den lable
-			nop
-		ants_case_9:
-			addi $v0, $v0, 9	                 # cong hang so
-			j ants_end_sw_c                          # nhay den lable
-			nop                                      # lenh tre
-		ants_end_sw_c:
-			add $s3, $s3, 1	                         # cong hang so
-			la $s1, postfix                          #postfix = $s1
-			add $s1, $s1, $s3                       # thuc hien phep cong
-			lb $t1, 0($s1)                           # load byte to $t1
-			beq $t1, $zero, end_while_ants           # so sanh if = then lable
-			beq $t1, ' ', end_while_ants              # so sanh if = then lable
-			mul $v0, $v0, 10                          # phep nhan
-			j while_ants                              # nhay den lable
-			nop                                      # lenh tre
-	end_while_ants:
-		add $a0, $zero, $v0                              # phep gan
-		jal push                                         # nhay den push
-		nop                                              # lenh tre
-		# get $ra
-		lw $ra, 0($sp)                                   # quay ve
-		jr $ra                                           # quay ve
-		nop                                              # lenh tre
-		
-		
-#-----------------------------------------------------------------
-#Procedure check_number
-# @brief check character is number or not 
-# @param[int] a0 : character to check
-# @param[out] v0 : 1 = true; 0 = false
-#-----------------------------------------------------------------
-check_number:
-        
-	li $t8, '0'                                         # gan gia tri
-	li $t9, '9'                                         # gan gia tri
+printResult:	
+	li $v0, 4
+	la $a0, prompt_result
+	syscall
+	li $v0, 2
+	l.s $f12,($t4)				# load gia tri cua $t4 ra con tro $f12
+	syscall
+	li $v0, 11
+	li $a0, '\n'
+	syscall
+ask: 						# tiep tuc khong??
+ 	li $v0, 50
+ 	la $a0, endMsg
+ 	syscall
+ 	beq $a0,0,start
+ 	beq $a0,2,ask
+# End program
+end:
+ 	#li $v0, 55
+ 	#la $a0, byeMsg
+ 	#li $a1, 1
+ 	#syscall
+ 	li $v0, 10
+ 	syscall
+ 
+# Sub program
+EOF:
+	beq $s7,2,wrongInput			# ket thuc khi gap toan tu hoac dau ngoac mo
+	beq $s7,3,wrongInput
+	beq $t5,-1,wrongInput			# -1 thì không có dau vao
+	j popAllOperatorInStack
+digit1:
+	beq $t4,'0',storeDigit1
+	beq $t4,'1',storeDigit1
+	beq $t4,'2',storeDigit1
+	beq $t4,'3',storeDigit1
+	beq $t4,'4',storeDigit1
+	beq $t4,'5',storeDigit1
+	beq $t4,'6',storeDigit1
+	beq $t4,'7',storeDigit1
+	beq $t4,'8',storeDigit1
+	beq $t4,'9',storeDigit1
+	j continueScan
 	
-	beq $t8, $a0, check_number_true                     # so sanh if = then lable
-	beq $t9, $a0, check_number_true                     # so sanh if = then lable
-	
-	slt $v0, $t8, $a0                                # so sanh if < then =1                                 
-	beqz $v0, check_number_false                     # so sanh if = 0 then lable
-	
-	slt $v0, $a0, $t9                                # so sanh if < then =1
-	beqz $v0, check_number_false                     # so sanh if = 0then lable
-check_number_true:
-	
-	li $v0, 1                                         # quay ve
-	jr $ra                                         # quay ve
-	nop                                         # lenh tre
-check_number_false:
-	
-	li $v0, 0                                         # quay ve
-	jr $ra                                         # quay ve
-	nop                                         # lenh tre
-#-----------------------------------------------------------------
-#Procedure pop
-# @brief pop from stack at $s2
-# @param[out] v0 : value to popped
-#-----------------------------------------------------------------
-pop:
-	lw $v0, -4($s2)                          # tra lai stack
-	sw $zero, -4($s2)                        #xet lai gia tri
-	addi $s2, $s2, -4                        # cong hang so                   
-	jr $ra                                   # quay ve
-	nop                                      # lenh tre
-#-----------------------------------------------------------------
-#Procedure push
-# @brief push to stack at $s2
-# @param[in] a0 : value to push
-#-----------------------------------------------------------------
-push:
-	sw $a0, 0($s2)                           #ghi noi dung
-	addi $s2, $s2, 4                         # cong hang so
-	jr $ra                                   # quay ve
-	nop                                      # lenh tre
-end_while_p_s:
-# add null to end of stack
-
-# print postfix
-la $a0, prompt_result                             # goi string
-li $v0, 4                                         # gian gia tri
-syscall                                           # thuc hien
-
-jal pop                                           # nhay den pop
-nop                                               # lenh tre
-add $a0, $zero, $v0                               # lenh gan
-li $v0, 1                                         # gan gia tri
-syscall                                           # thuc hien
-
-la $a0, newLine                                   # goi string
-li $v0, 4                                         # gan gia tri
-syscall                                           # thuc hien
+digit2: 
+	beq $t4,'0',storeDigit2
+	beq $t4,'1',storeDigit2
+	beq $t4,'2',storeDigit2
+	beq $t4,'3',storeDigit2
+	beq $t4,'4',storeDigit2
+	beq $t4,'5',storeDigit2
+	beq $t4,'6',storeDigit2
+	beq $t4,'7',storeDigit2
+	beq $t4,'8',storeDigit2
+	beq $t4,'9',storeDigit2
+	# neu khong nhap vao chu so thu 2
+	jal numberToPostfix
+	j continueScan
+digit3: 
+	# neu scan ra chu so thu 3 --> error
+	beq $t4,'0',wrongInput
+	beq $t4,'1',wrongInput
+	beq $t4,'2',wrongInput
+	beq $t4,'3',wrongInput
+	beq $t4,'4',wrongInput
+	beq $t4,'5',wrongInput
+	beq $t4,'6',wrongInput
+	beq $t4,'7',wrongInput
+	beq $t4,'8',wrongInput
+	beq $t4,'9',wrongInput
+	# neu khong co chu so thu  3
+	jal numberToPostfix
+	j continueScan
+plusMinus:					# Input is + -
+	beq $s7,2,wrongInput			# Nhan toán tu sau toán tu hoac "("
+	beq $s7,3,wrongInput
+	beq $s7,0,wrongInput			# nhan toan tu truoc bat ki so nao
+	li $s7,2					# Thay doi trang thai dau  vào thành 2
+	continuePlusMinus:
+	beq $t6,-1,inputOperatorToStack		# Không có gì trong  stack -> day vao
+	add $t8,$t6,$t3				# Load dia chi cua toan tu o dinh
+	lb $t7,($t8)				# Load byte giá tri cua toan tu o dinh
+	beq $t7,'(',inputOperatorToStack		# neu dinh là ( --> day vào
+	beq $t7,'+',equalPrecedence		# neu dinh là + - --> day vào
+	beq $t7,'-',equalPrecedence
+	beq $t7,'*',lowerPrecedence		# neu dinh là * / thi lay * / ra roi day vao
+	beq $t7,'/',lowerPrecedence
+multiplyDivide:					# dau vào là * /
+	beq $s7,2,wrongInput			# Nhan toán tu sau toán tu hoac "("
+	beq $s7,3,wrongInput
+	beq $s7,0,wrongInput			# Nhan toán tu truoc bat ki so nào
+	li $s7,2					# Thay doi trang thai dau vào thành 2
+	beq $t6,-1,inputOperatorToStack		# Không có gì trong  stack -> day vào
+	add $t8,$t6,$t3				# Load dia chi cua toan tu o dinh
+	lb $t7,($t8)				# Load bytegiá tri cua toan tu o dinh
+	beq $t7,'(',inputOperatorToStack		# neu dinh là ( --> day vào
+	beq $t7,'+',inputOperatorToStack		# neu dinh là + - --> day vào
+	beq $t7,'-',inputOperatorToStack
+	beq $t7,'*',equalPrecedence		# neu dinh là * / day vao
+	beq $t7,'/',equalPrecedence
+openBracket:					# dau vào là (
+	beq $s7,1,wrongInput			# Nhan "(" sau mot so hoac dau ")"
+	beq $s7,4,wrongInput	
+	li $s7,3					# Thay doi trang thai dau vào thành 3
+	j inputOperatorToStack
+closeBracket:					# dau vao la  ")"
+	beq $s7,2,wrongInput			# Nhan ")" sau mot toán tu hoac toán tu
+	beq $s7,3,wrongInput	
+	li $s7,4					# Thay doi trang thai dau vào thành 4
+	add $t8,$t6,$t3				# Load dia chi toán tu dinh  
+	lb $t7,($t8)				# Load giá tri cua toan tu o dinh
+	beq $t7,'(',wrongInput			# Input bao gom () không có gì o giua  --> error
+	continueCloseBracket:
+	beq $t6,-1,wrongInput			# không tìm duoc dau "(" --> error
+	add $t8,$t6,$t3				# Load dia chi cua toan tu o dinh
+	lb $t7,($t8)				# Load gia tri cua toan tu o dinh
+	beq $t7,'(',matchBracket			# Tìm ngoac phu hop
+	jal PopOpeatorToPostfix			# day toan tu o dinh vào postfix
+	j continueCloseBracket			# tiep tuc vong lap cho den khi tim duoc ngoac phu hop		
+equalPrecedence:					#  nhan + - và dinh stack là + - || nhan * / và dinh stack là * /
+	jal PopOpeatorToPostfix			# lay toan tu dinh stack ra Postfix
+	j inputOperatorToStack			# day toan tu moi vào stack 
+lowerPrecedence:					# nhan + - và dinh stack * /
+	jal PopOpeatorToPostfix			# lay toan tu dinh stack ra va day vào postfix
+	j continuePlusMinus			# tiep tuc vong lap
+inputOperatorToStack:				# day dau vào cho toán tu
+	add $t6,$t6,1				# tang offset cua toan tu o dinh lên 1
+	add $t8,$t6,$t3				# load dia chi cua  toán tu o dinh
+	sb $t4,($t8)				# luu toan tu nhap vao stack
+	j scanInfix
+PopOpeatorToPostfix:				# lay toan tu o dinh va luu vào postfix
+	addi $t5,$t5,1				# tang offet cua toan tu o dinh stack lên 1
+	add $t8,$t5,$t2				# load dia chi cua toan tu o dinh stack
+	addi $t7,$t7,100				# mã hóa toán tu + 100
+	sb $t7,($t8)				# luu toan tu vào postfix
+	addi $t6,$t6,-1				# giam offset cua toan tu o dinh stack di 1
+	jr $ra
+matchBracket:					# xóa cap dau ngoac
+	addi $t6,$t6,-1				# giam offset cua toan tu o dinh stack di 1
+	j scanInfix
+popAllOperatorInStack:						# lay het toan tu vao postfix
+	jal numberToPostfix
+	beq $t6,-1,finishScan			# stack rong --> ket thuc
+	add $t8,$t6,$t3				# lay dia chi cua toan tu o dinh stack 
+	lb $t7,($t8)				# lay gia tri cua toan tu o dinh stack
+	beq $t7,'(',wrongInput			# ngoac khong phu hop --> error
+	beq $t7,')',wrongInput
+	jal PopOpeatorToPostfix
+	j popAllOperatorInStack					# lap cho den khi stack rong
+storeDigit1:
+	beq $s7,4,wrongInput			# nhan vao so sau  ")"
+	addi $s4,$t4,-48				# luu chu so dau tien duoi dang so ma ascii cua chu so 0 la 48
+	add $t9,$zero,1				# Thay doi trang thai thanh 1 
+	li $s7,1
+	j scanInfix
+storeDigit2:
+	beq $s7,4,wrongInput			# nhan vao so sau  ")"
+	addi $s5,$t4,-48				# luu chu so thu hai duoi dang so
+	mul $s4,$s4,10
+	add $s4,$s4,$s5				# luu number = first digit * 10 + second digit
+	add $t9,$zero,2				# thay doi trang thái thành 2 
+	li $s7,1
+	j scanInfix
+numberToPostfix:
+	beq $t9,0,endnumberToPostfix
+	addi $t5,$t5,1
+	add $t8,$t5,$t2			
+	sb $s4,($t8)				# luu so vao postfix
+	add $t9,$zero,$zero			# thay doi trang thai ve 0
+	endnumberToPostfix:
+	jr $ra
