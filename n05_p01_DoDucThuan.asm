@@ -37,9 +37,9 @@ endMsg:                 .asciiz "Ban co muon tiep tuc?"
 main:
       jal input_infix
       nop
-      jal remove_space
+      jal move_stack_to_postfix
       nop
-      j remove_parentheses
+      jal sort_postfix
       nop
       
 end_main:
@@ -88,7 +88,7 @@ end_input_infix:
       nop
 
 ############################################################################################
-remove_space:		addi $sp , $sp, -4                     # create stack
+move_stack_to_postfix:		addi $sp , $sp, -4                     # create stack
                         sw  $ra, 0($sp)
       remove_space1:    lb $t5, infix_($s4)                   # load byte
 			addi	$s4, $s4, 1                        # tang bien
@@ -191,7 +191,7 @@ continue: 		addi	$t3, $s0, 1			# tiep tuc doc truoc 1 ky tu
 gt99_error_popup:	li	$v0, 55                         # gan gia tri
 			la	$a0, msg_error1                 # thong baso loi
 			syscall
-			j	input_infix                     # quay lai input_infix
+			j	main                     # quay lai input_infix
 			nop                                     # lenh tre
 			
 # toan hang '+' va '-' co thu tu uu tien ngang nhau
@@ -249,7 +249,7 @@ consider_lpar:		addi	$a3, $a3, 1
 lt0_error_popup:	li	$v0, 55
 			la	$a0, msg_error2
 			syscall
-			j	input_infix
+			j	main
 			nop                                     # lenh tre			
 			
 push_op_to_stack:	addi	$s2, $s2, 1
@@ -262,7 +262,7 @@ push_op_to_stack:	addi	$s2, $s2, 1
 end_iterate_infix:	beq	$s2, -1, L2
                         j abs
                         nop
-                   L2: jal remove_parentheses
+                   L2: jal sort_postfix
                        nop                                     # lenh tre
 	abs:		lb	$t0, stack($s2)
 			sb	$t0, postfix($s1)
@@ -270,7 +270,7 @@ end_iterate_infix:	beq	$s2, -1, L2
 			addi	$s1, $s1, 1
 			j	end_iterate_infix
 			nop                                     # lenh tre
-end_remove_space:
+end_move_stack_to_postfix:
                         lw $ra, 0($sp)                         # lay du lieu tu stack vao $ra
                         addi $sp, $sp, 4                       # cho stack xuong        
                         jr $ra
@@ -278,7 +278,7 @@ end_remove_space:
 # bo dau ngoac trong postfix
 
 #####################################  Produce remove_parentheses  ###########################
-remove_parentheses:	addi $sp , $sp, -4                     # create stack
+sort_postfix:	        addi $sp , $sp, -4                     # create stack
                         sw  $ra, 0($sp)                        # doc du lieu vao stack
       remove_parentheses1:   lb	$t5, postfix($s6)
 			addi	$s6, $s6, 1
@@ -310,7 +310,7 @@ print_postfix:		li	$v0, 4
 error1:			li	$v0, 55
 			la	$a0, msg_error4
 			syscall
-			j	input_infix
+			j	main
 			nop                                     # lenh tre
 
 # 2. tinh postfix
@@ -320,8 +320,9 @@ calculate_postfix:	li	$s1, 0		# set lai bien duyet postfix
 
 iterate_postfix: 	lb	$t0, postfix_($s1)
 			beq	$t0, 0, printf_result
+			
 			nop	                                 # lenh tre
-			beq	$t0, ' ', eliminate_space       # bieu thuc so sanh
+	         	beq	$t0, ' ', eliminate_space       # bieu thuc so sanh
 			nop                                     # lenh tre
 			beq	$t0, '0', continue_		# neu gap chu so thi doc tiep ky tu tiep theo
 			nop                                     # lenh tre
@@ -475,7 +476,7 @@ div_:			beq	$t7, 0, invalid_dividend	# kiem tra so bi chia khac 0
 invalid_dividend:	li	$v0, 55
 			la	$a0, msg_error3
 			syscall
-			j	input_infix                 # nhay den lable
+			j	main                 # nhay den lable
 			nop                                     # lenh tre
 			
 mul_:			mul	$t6, $t6, $t7
@@ -502,16 +503,15 @@ zero_power:		li	$t4, 1
 			addi	$sp, $sp, 4                      # tang bien 
 			addi	$s1, $s1, 1                      # tang bien
 			j	iterate_postfix                 # nhay den lable
-end_remove_parentheses:
+end_sort_postfix:
                 lw $ra, 0($sp)                         # lay du lieu tu stack vao $ra
                 addi $sp, $sp, 4                       # cho stack xuong        
                 jr $ra
                 nop
 # in ket qua bieu thuc
-########################### Produce printf_result  #####################################
+
 printf_result:	
-                        #addi $sp , $sp, -4                     # create stack
-                        #sw  $ra, 0($sp)	
+                       
                         li	$v0, 4                           # gan gia tri
 			la	$a0, msg_print_result            # lay string 
 			syscall                                  # thuc hien
@@ -522,8 +522,4 @@ printf_result:
 			li	$v0, 4                           # thuc hien
 			la	$a0, msg_enter                   # loi goi string
 			syscall                                  # thuc hien
-#end_printf_result:
-#          lw $ra, 0($sp)                         # lay du lieu tu stack vao $ra
- #         addi $sp, $sp, 4                       # cho stack xuong        
-  #        jr $ra
-   #       nop
+
