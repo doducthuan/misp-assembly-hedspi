@@ -34,8 +34,23 @@ msg_errorValue:         .asciiz "Input khong hop le"
 endMsg:                 .asciiz "Ban co muon tiep tuc?"
 
 .text
+main:
+      jal input_infix
+      nop
+      jal remove_space
+      nop
+      j remove_parentheses
+      nop
+end_main:
+  li $v0, 10                   # option exit (terminate execution)
+  syscall                      #thuc hien    
+
+
+############################  Produce input #############################################
 # nhap infix
-input_infix:		li	$v0, 54                    # nhap dau vao
+input_infix:		addi $sp , $sp, -4                     # create stack
+                        sw  $ra, 0($sp)
+                        li	$v0, 54                    # nhap dau vao
 			la	$a0, msg_read_infix        # loi goi string
 			la	$a1, infix_                
 			la 	$a2, 256
@@ -65,7 +80,16 @@ li	$s5, 0                                            # drop space
 
 # bien dem dau (
 li	$a3, 0
-remove_space:		lb	$t5, infix_($s4)                   # load byte
+end_input_infix:
+      lw $ra, 0($sp)                         # lay du lieu tu stack vao $ra
+      addi $sp, $sp, 4                       # cho stack xuong        
+      jr $ra
+      nop
+
+############################################################################################
+remove_space:		addi $sp , $sp, -4                     # create stack
+                        sw  $ra, 0($sp)
+                       lb	$t5, infix_($s4)                   # load byte
 			addi	$s4, $s4, 1                        # tang bien
 			beq	$t5, ' ', remove_space	           # if = space then remove space
 			nop                                        # lenh tre
@@ -234,17 +258,28 @@ push_op_to_stack:	addi	$s2, $s2, 1
 			nop                                     # lenh tre
 
 # dua toan bo toan hang con lai cua stack ra khoi ngan xep, va push vao postfix
-end_iterate_infix:	beq	$s2, -1, remove_parentheses
-			nop                                     # lenh tre
-			lb	$t0, stack($s2)
+end_iterate_infix:	beq	$s2, -1, L2
+                        j abs
+                        nop
+                   L2: jal remove_parentheses
+                       nop                                     # lenh tre
+	abs:		lb	$t0, stack($s2)
 			sb	$t0, postfix($s1)
 			addi	$s2, $s2, -1
 			addi	$s1, $s1, 1
 			j	end_iterate_infix
 			nop                                     # lenh tre
-
+end_remove_space:
+                        lw $ra, 0($sp)                         # lay du lieu tu stack vao $ra
+                        addi $sp, $sp, 4                       # cho stack xuong        
+                        jr $ra
+                        nop
 # bo dau ngoac trong postfix
-remove_parentheses:	lb	$t5, postfix($s6)
+
+#####################################  Produce remove_parentheses  ###########################
+remove_parentheses:	addi $sp , $sp, -4                     # create stack
+                        sw  $ra, 0($sp)                        # doc du lieu vao stack
+                        lb	$t5, postfix($s6)
 			addi	$s6, $s6, 1
 			beq	$t5, '(', remove_parentheses
 			nop                                     # lenh tre
@@ -338,12 +373,15 @@ letter_condition1:	sle	$t8, $t0, 90
  	                syscall
  	                j ask
  	                nop
+
 ask: 						# tiep tuc khong??
  	li $v0, 50
  	la $a0, endMsg
  	syscall
- 	beq $a0,0,input_infix
- 	beq $a0,2,ask
+ 	beq $a0,0,main
+	beq $a0,2,ask
+ 	
+
  end:
  	#li $v0, 55
  	#la $a0, byeMsg
